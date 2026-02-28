@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Goudie Girls Go | All I Want For Christmas Is Love</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #ffffff; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script>
+let gameState = "TITLE";
+let score = 0;
+let danceFrame = 0;
+let grinchX, grinchY;
+let nextGrinchTime = 0;
+let danceSpeed = 5; 
+let lastSwitch = 0;
+let highScore = localStorage.getItem('goudieGirlsBest') || 0;
+
+let bgMusic, boingSound;
+
+function preload() {
+    bgMusic = loadSound('music.mp3'); 
+    boingSound = loadSound('boing.mp3');
+}
+
+function setup() {
+    createCanvas(windowWidth, windowHeight);
+    textAlign(CENTER, CENTER);
+    spawnGrinch();
+}
+
+function draw() {
+    background(255); 
+    if (gameState === "TITLE") {
+        drawTitle();
+    } else {
+        drawEnvironment();
+        drawUI();
+        if (gameState === "PLAY") {
+            updateReindeer();
+            checkGrinchSpawn();
+        } else if (gameState === "FREEZE") {
+            drawGrinch();
+        }
+        drawReindeer();
+    }
+}
+
+function spawnGrinch() {
+    grinchX = random(100, width - 100);
+    grinchY = random(100, height - 100);
+    nextGrinchTime = millis() + random(3000, 7000);
+}
+
+function checkGrinchSpawn() {
+    if (millis() > nextGrinchTime) { gameState = "FREEZE"; }
+}
+
+function updateReindeer() {
+    if (millis() - lastSwitch > (1000 / danceSpeed)) {
+        danceFrame = danceFrame === 0 ? 1 : 0;
+        lastSwitch = millis();
+    }
+}
+
+function mousePressed() {
+    userStartAudio(); 
+    if (gameState === "TITLE") {
+        gameState = "PLAY";
+        if (bgMusic.isLoaded()) { bgMusic.loop(); bgMusic.setVolume(0.5); }
+    } else if (gameState === "FREEZE") {
+        let d = dist(mouseX, mouseY, grinchX, grinchY);
+        if (d < 60) {
+            score++;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('goudieGirlsBest', highScore);
+            }
+            if (boingSound.isLoaded()) boingSound.play();
+            gameState = "PLAY";
+            spawnGrinch();
+        }
+    }
+    // Reset Button Logic
+    if (mouseX > width - 110 && mouseY > height - 50) {
+        highScore = 0;
+        localStorage.setItem('goudieGirlsBest', 0);
+    }
+}
+
+function drawEnvironment() {
+    noStroke();
+    fill(173, 216, 230, 150);
+    for(let i=0; i<5; i++) { ellipse(random(width), random(height), 6); }
+    fill('#00FF41');
+    triangle(60, height, 110, height-120, 160, height);
+    fill(220);
+    ellipse(width - 80, height - 50, 60, 25);
+    fill(100, 50, 0);
+    circle(width - 90, height - 52, 12); circle(width - 70, height - 48, 12);
+}
+
+function drawReindeer() {
+    push();
+    translate(width / 2, height / 2 + 50);
+    let yOff = (gameState === "PLAY" && danceFrame === 1) ? -25 : 0;
+    fill(0); 
+    rect(-35, -50 + yOff, 70, 90, 15);
+    ellipse(0, -75 + yOff, 60, 50);
+    stroke(0); strokeWeight(5);
+    line(-20, -100 + yOff, -35, -125 + yOff); line(20, -100 + yOff, 35, -125 + yOff);
+    noStroke(); fill(255, 0, 0);
+    triangle(-25, -95 + yOff, 25, -95 + yOff, 0, -140 + yOff);
+    fill(255); circle(0, -140 + yOff, 12);
+    pop();
+}
+
+function drawGrinch() {
+    fill('#00FF41'); stroke(0); strokeWeight(3);
+    ellipse(grinchX, grinchY, 90, 90);
+    fill(255, 255, 0); ellipse(grinchX - 18, grinchY - 10, 18, 12); ellipse(grinchX + 18, grinchY - 10, 18, 12);
+    noFill(); arc(grinchX, grinchY + 15, 50, 25, 0, PI);
+    noStroke(); fill(255, 0, 0); textSize(50);
+    text("FREEZE!", width/2, 120);
+}
+
+function drawTitle() {
+    background(255);
+    fill(0); textFont('Courier New'); textSize(22);
+    text("THE GOUDIE GIRLS GO PRESENTS", width / 2, height / 2 - 160);
+    fill('#00FF41'); textSize(42); textStyle(BOLD);
+    text("ALL I WANT FOR\nCHRISTMAS IS LOVE", width / 2, height / 2 - 80);
+    textStyle(NORMAL); fill(0); textSize(18);
+    let startY = height / 2 + 40;
+    text("1. DANCE while the music plays.", width / 2, startY);
+    text("2. FREEZE when the Grinch appears.", width / 2, startY + 30);
+    text("3. TAP the Grinch to start again.", width / 2, startY + 60);
+    fill('#00FF41'); textSize(24);
+    text("TAP SCREEN TO START", width / 2, height / 2 + 180);
+    push(); translate(width / 2, height / 2 - 240); scale(0.4); drawReindeer(); pop();
+}
+
+function drawUI() {
+    fill(0); textFont('Courier New'); textSize(22); textAlign(LEFT);
+    text("SCORE: " + score, 30, 50);
+    fill('#00FF41'); text("BEST:  " + highScore, 30, 80);
+    textAlign(CENTER);
+    fill(0); rect(width - 110, height - 50, 100, 40, 5);
+    fill('#00FF41'); textSize(14); text("RESET BEST", width - 60, height - 30);
+    push(); translate(width - 50, 50); scale(0.25); drawReindeer(); pop();
+}
+
+function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+</script>
+</body>
+</html>
